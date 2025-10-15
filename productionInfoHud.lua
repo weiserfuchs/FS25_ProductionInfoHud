@@ -323,6 +323,55 @@ function ProductionInfoHud:AddHusbandry(myProductionItems, husbandry)
         self:AddProductionItemToList(myProductionItems, productionItem);
     end
 
+    -- Fabian
+    spec = husbandry.spec_husbandryFeedingRobot;
+    if spec ~= nil then
+        local feedingRobot = spec.feedingRobot;
+        local recipe = feedingRobot.robot.recipe;
+        for _, ingredient in ipairs(recipe.ingredients) do
+            local litersPerHour = husbandry.spec_husbandryFood.litersPerHour
+            local fillLevel = 0
+            local spot = nil;
+            for _, fillType in ipairs(ingredient.fillTypes) do
+                fillLevel = fillLevel + feedingRobot:getFillLevel(fillType);
+                if spot == nil then
+                    -- use first spot which is found for the ingredients
+                    spot = feedingRobot.fillTypeToUnloadingSpot[fillType];
+                end
+            end
+            local producableWithThisIngredient = fillLevel / ingredient.ratio;
+            
+            -- item für produktionsliste erstellen.
+            local productionItem = {}
+            productionItem.name = husbandry:getName().." Roboter";
+            productionItem.fillTypeId = fillType;
+            -- negative when more used than produced. calculated on one day per month as giants always does
+            productionItem.productionPerHour = litersPerHour * husbandry.spec_husbandry.globalProductionFactor * -1;
+            -- time until full or empty, nil when not changing
+            productionItem.hoursLeft = nil;
+            productionItem.fillLevel = fillLevel
+            productionItem.capacity = spot.capacity
+            productionItem.isInput = true;
+            productionItem.isOutput = false;
+            productionItem.IsAnimal = true;
+            productionItem.target = husbandry;
+
+            productionItem.fillTypeTitle = ingredient.title;
+
+            if productionItem.capacity == 0 then
+                productionItem.capacityLevel = 0
+            elseif productionItem.capacity == nil then
+                productionItem.capacityLevel = 0
+                print("Error: No storage for '" .. productionItem.fillTypeTitle .. "' in productionPoint but defined to used. Has to be fixed in '" .. husbandry.owningPlaceable.customEnvironment .."'.")
+            else
+                productionItem.capacityLevel = productionItem.fillLevel / productionItem.capacity;
+            end
+
+            self:AddProductionItemToList(myProductionItems, productionItem);
+        end
+    end
+    -- Fabian
+
     -- liguid manure ist da, also Item erstellen
     spec = husbandry.spec_husbandryLiquidManure;
     if spec ~= nil then
